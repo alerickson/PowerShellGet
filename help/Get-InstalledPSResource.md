@@ -5,7 +5,7 @@ online version: <add>
 schema: 2.0.0
 ---
 
-# Get-PSResource
+# Get-InstalledPSResource
 
 ## SYNOPSIS
 {{ Fill in the Synopsis }}
@@ -13,7 +13,7 @@ schema: 2.0.0
 ## SYNTAX
 
 ```
-Get-PSResource [[-Name] <String[]>] [-Version <String>] [-Path <String>] [-WhatIf] [-Confirm]
+Get-InstalledPSResource [[-Name] <String[]>] [-Version <String>] [-Path <String>] [-WhatIf] [-Confirm]
  [<CommonParameters>]
 ```
 
