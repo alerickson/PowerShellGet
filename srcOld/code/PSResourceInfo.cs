@@ -27,7 +27,7 @@ namespace Microsoft.PowerShell.PowerShellGet
         public Uri LicenseUri { get; set; }
         public Uri ProjectUri { get; set; }
         public Uri IconUri { get; set; }
-        public string PowerShellGetFormatVersion { get; set; }
+        public System.Version PowerShellGetFormatVersion { get; set; }
         public string ReleaseNotes { get; set; }
         public string Repository { get; set; }
         public bool IsPrerelease { get; set; }
