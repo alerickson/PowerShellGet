@@ -15,7 +15,6 @@ using static Microsoft.PowerShell.PowerShellGet.PSResourceInfo;
 using static Microsoft.PowerShell.PowerShellGet.PSResourceInfo.VersionInfo;
 using NuGet.Versioning;
 
-
 namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
 {
     /// <summary>
@@ -98,21 +97,66 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                 dirsToSearch = dirsToSearch.Distinct().ToList();
             }
 
-            //            dirsToSearch = new List<string>();
-            //            dirsToSearch.AddRange(Directory.GetDirectories("C:\\Program Files\\WindowsPowerShell\\Modules").ToList());
-
             dirsToSearch.ForEach(dir => cmdletPassedIn.WriteDebug(string.Format("All directories to search: '{0}'", dir)));
             
             if (name != null && !name[0].Equals("*"))
             {
-                List<string> nameLowerCased = new List<string>();
                 List<string> scriptXMLnames = new List<string>();
-                Array.ForEach(name, n => nameLowerCased.Add(n.ToLower()));
                 Array.ForEach(name, n => scriptXMLnames.Add((n + "_InstalledScriptInfo.xml").ToLower()));
+                char[] fileNameDelimiter = new char[] { '_' };
 
-                dirsToSearch = dirsToSearch.FindAll(p => (nameLowerCased.Contains(new DirectoryInfo(p).Name.ToLower())
-                    || scriptXMLnames.Contains((System.IO.Path.GetFileName(p)).ToLower())));
+                List<string> wildCardDirsToSearch = new List<string>();
+                foreach (var n in name)
+                {
+                    if (n.Contains("*"))
+                    {
+                        char[] wildcardDelimiter = new char[] { '*' };
+                        var tokenizedName = n.Split(wildcardDelimiter, StringSplitOptions.RemoveEmptyEntries);
 
+                        // 1)  *owershellge*
+                        if (n.StartsWith("*") && n.EndsWith("*"))
+                        {
+                            wildCardDirsToSearch.AddRange(dirsToSearch.FindAll(p => (new DirectoryInfo(p).Name.ToLower().Contains(tokenizedName[0]))));
+                            
+                            wildCardDirsToSearch.AddRange(dirsToSearch.FindAll(p =>
+                                (System.IO.Path.GetFileName(p).Split(fileNameDelimiter, StringSplitOptions.RemoveEmptyEntries))[0].ToLower().Contains(tokenizedName[0])));
+                        }
+                        // 2)  *erShellGet
+                        else if (n.StartsWith("*"))
+                        {
+                            wildCardDirsToSearch.AddRange(dirsToSearch.FindAll(p => (new DirectoryInfo(p).Name.ToLower().EndsWith(tokenizedName[0]))));
+
+                            wildCardDirsToSearch.AddRange(dirsToSearch.FindAll(p =>
+                                (System.IO.Path.GetFileName(p).Split(fileNameDelimiter, StringSplitOptions.RemoveEmptyEntries))[0].ToLower().EndsWith(tokenizedName[0])));
+                        }
+                        // 3)  PowerShellG*
+                        else if (n.EndsWith("*"))
+                        {
+                            wildCardDirsToSearch.AddRange(dirsToSearch.FindAll(p => (new DirectoryInfo(p).Name.ToLower().StartsWith(tokenizedName[0]))));
+                            wildCardDirsToSearch.AddRange(dirsToSearch.FindAll(p =>
+                                (System.IO.Path.GetFileName(p).Split(fileNameDelimiter, StringSplitOptions.RemoveEmptyEntries))[0].ToLower().StartsWith(tokenizedName[0])));
+                        }
+                        // 4)  Power*Get
+                        else if (tokenizedName.Length == 2)
+                        {
+                            wildCardDirsToSearch.AddRange(dirsToSearch.FindAll(p => 
+                                (new DirectoryInfo(p).Name.ToLower().StartsWith(tokenizedName[0]) 
+                                && new DirectoryInfo(p).Name.ToLower().EndsWith(tokenizedName[1]))));
+                            wildCardDirsToSearch.AddRange(dirsToSearch.FindAll(p =>
+                                (System.IO.Path.GetFileName(p).Split(fileNameDelimiter, StringSplitOptions.RemoveEmptyEntries))[0].ToLower().StartsWith(tokenizedName[0])
+                                && (System.IO.Path.GetFileName(p).Split(fileNameDelimiter, StringSplitOptions.RemoveEmptyEntries))[0].ToLower().EndsWith(tokenizedName[0])));
+                        }
+                    }
+                    else
+                    {
+                        wildCardDirsToSearch.AddRange(dirsToSearch.FindAll(p => (new DirectoryInfo(p).Name.ToLower().Equals(n))));
+                        // script paths will look something like this:  InstalledScriptInfos \  <name of script>.xml
+
+                        wildCardDirsToSearch.AddRange(dirsToSearch.FindAll(p => (scriptXMLnames.Contains(System.IO.Path.GetFileName(p).ToLower()))));
+                    }
+                }
+                
+                dirsToSearch = wildCardDirsToSearch;
                 cmdletPassedIn.WriteDebug(dirsToSearch.Any().ToString());
             }
 
@@ -136,56 +180,35 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                 }
             }
 
-            List<string> installedPkgsToReturn = new List<string>();
+            List<string> installedPkgsToReturn = new List<string>();  // these are the xmls
             
             // check if the version specified is within a version range
             if (versionRange != null)
             {
                 foreach (string pkgPath in dirsToSearch)
                 {
+                    // this is going to happen only for modules, not for scripts 
                     cmdletPassedIn.WriteDebug(string.Format("Searching through package path: '{0}'", pkgPath));
                     string[] versionsDirs = Directory.GetDirectories(pkgPath);
 
                     foreach (string versionPath in versionsDirs)
                     {
                         cmdletPassedIn.WriteDebug(string.Format("Searching through package version path: '{0}'", versionPath));
-                        NuGetVersion dirAsNugetVersion;
                         DirectoryInfo dirInfo = new DirectoryInfo(versionPath);
-                        NuGetVersion.TryParse(dirInfo.Name, out dirAsNugetVersion);
+                        NuGetVersion.TryParse(dirInfo.Name, out NuGetVersion dirAsNugetVersion);
                         cmdletPassedIn.WriteDebug(string.Format("Directory parsed as NuGet version: '{0}'", dirAsNugetVersion));
 
                         if (versionRange.Satisfies(dirAsNugetVersion))
                         {
-                            // just search scripts paths
-                            if (pkgPath.ToLower().Contains("Scripts"))
+                         
+                            // This will be one version or a version range.
+                            string pkgXmlFilePath = System.IO.Path.Combine(versionPath, "PSGetModuleInfo.xml");
+                            if (File.Exists(pkgXmlFilePath))
                             {
-                                if (File.Exists(pkgPath))
-                                {
-                                    installedPkgsToReturn.Add(pkgPath);
-                                }
+                                cmdletPassedIn.WriteDebug(string.Format("Found module XML: '{0}'", pkgXmlFilePath));
+                                installedPkgsToReturn.Add(pkgXmlFilePath);
                             }
-                            else
-                            {
-                                // modules paths
-                                versionsDirs = Directory.GetDirectories(pkgPath);
-                                cmdletPassedIn.WriteDebug(string.Format("Getting sub directories from : '{0}'", pkgPath));
-
-                                // check if the pkg path actually has version sub directories
-                                if (versionsDirs.Length != 0)
-                                {
-                                    Array.Sort(versionsDirs, StringComparer.OrdinalIgnoreCase);
-                                    Array.Reverse(versionsDirs);
-
-                                    string pkgXmlFilePath = System.IO.Path.Combine(versionsDirs.First(), "PSGetModuleInfo.xml");
-
-                                    // TODO:  check if this xml file exists, if it doesn't check if it exists in a previous version
-                                    cmdletPassedIn.WriteDebug(string.Format("Found module XML: '{0}'", pkgXmlFilePath));
-
-                                    installedPkgsToReturn.Add(pkgXmlFilePath);
-                                }
-                            }
-
-                            installedPkgsToReturn.Add(versionPath);
+                
                         }
                     }
                 }
@@ -197,34 +220,22 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                 foreach (string pkgPath in dirsToSearch)
                 {
                     cmdletPassedIn.WriteDebug(string.Format("Searching through package path: '{0}'", pkgPath));
+                   
+                    // search modules paths
+                    string[] versionsDirs = new string[0];
 
-                    // just search scripts paths
-                    if (pkgPath.ToLower().Contains("scripts"))
+                    versionsDirs = Directory.GetDirectories(pkgPath);
+
+                    // Check if the pkg path actually has version sub directories.
+                    if (versionsDirs.Length != 0)
                     {
-                        if (File.Exists(pkgPath))
-                        {
-                            installedPkgsToReturn.Add(pkgPath);
-                        }
-                    }
-                    else
-                    {
-                        // search modules paths
-                        string[] versionsDirs = new string[0];
+                        Array.Sort(versionsDirs, StringComparer.OrdinalIgnoreCase);
+                        Array.Reverse(versionsDirs);
 
-                        versionsDirs = Directory.GetDirectories(pkgPath);
+                        string pkgXmlFilePath = System.IO.Path.Combine(versionsDirs.First(), "PSGetModuleInfo.xml");
 
-                        // Check if the pkg path actually has version sub directories.
-                        if (versionsDirs.Length != 0)
-                        {
-                            Array.Sort(versionsDirs, StringComparer.OrdinalIgnoreCase);
-                            Array.Reverse(versionsDirs);
-
-                            string pkgXmlFilePath = System.IO.Path.Combine(versionsDirs.First(), "PSGetModuleInfo.xml");
-
-                            // TODO:  check if this xml file exists, if it doesn't check if it exists in a previous version
-                            cmdletPassedIn.WriteDebug(string.Format("Found package XML: '{0}'", pkgXmlFilePath));
-                            installedPkgsToReturn.Add(pkgXmlFilePath);
-                        }
+                        cmdletPassedIn.WriteDebug(string.Format("Found package XML: '{0}'", pkgXmlFilePath));
+                        installedPkgsToReturn.Add(pkgXmlFilePath);
                     }
                 }
             }
@@ -232,11 +243,11 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
             IEnumerable<object> flattenedPkgs =  FlattenExtension.Flatten(installedPkgsToReturn);
             List<PSResourceInfo> foundInstalledPkgs = new List<PSResourceInfo>();
 
+            // Read metadata from XML and parse into PSResourceInfo object
             foreach (string xmlFilePath in flattenedPkgs)
             {
                 cmdletPassedIn.WriteDebug(string.Format("Reading package metadata from: '{0}'", xmlFilePath));
 
-                // Open xml and read metadata from it     
                 if (File.Exists(xmlFilePath))
                 {
                     PSObject deserializedObj = null;
@@ -264,20 +275,46 @@ namespace Microsoft.PowerShell.PowerShellGet.Cmdlets
                             cmdletPassedIn.WriteError(ErrorParsingName);
                         }
 
+                        // We need to check versions specifically for scripts...
                         try
                         {
-                            System.Version.TryParse(deserializedObj.Properties["Version"].Value?.ToString(), out System.Version versionProp);
-                            pkgAsPSObject.Version = versionProp;
+                            // Since we can only determine a script version from the metadata file or the script itself,
+                            // we now need to validate that if a version parameter was passed into the cmdlet, the version of this script falls within that version range
+                            // If version range is not null and the xmlFilePath is for a script
+                            if (versionRange != null && xmlFilePath.EndsWith("_InstalledScriptInfo.xml"))
+                            {
+                                cmdletPassedIn.WriteDebug(string.Format("Searching through package path: '{0}'", xmlFilePath));
+
+                                // try to parse the version in the xml
+                                System.Version.TryParse(deserializedObj.Properties["Version"].Value?.ToString(), out System.Version versionProp);
+                                NuGetVersion.TryParse(deserializedObj.Properties["Version"].Value?.ToString(), out NuGetVersion nugetVersion);
+
+                                if (versionRange.Satisfies(nugetVersion))
+                                {
+                                    // Continue parsing the rest of the object
+                                    pkgAsPSObject.Version = versionProp;
+                                }
+                                else
+                                {
+                                    // Otherwise skip parsing the rest of this object
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                System.Version.TryParse(deserializedObj.Properties["Version"].Value?.ToString(), out System.Version versionProp);
+                                pkgAsPSObject.Version = versionProp;
+                            }
                         }
                         catch (Exception e)
                         {
+                            // make these debug statements 
                             string exMessage = String.Format("VERSION error: " + e.Message);
                             ParseException ex = new ParseException(exMessage);
                             var ErrorParsingVersion = new ErrorRecord(ex, "ErrorParsingVersion", ErrorCategory.ParserError, null);
                             cmdletPassedIn.WriteError(ErrorParsingVersion);
                         }
 
-                        //check this one
                         pkgAsPSObject.Type = string.Equals(deserializedObj.Properties["Type"].Value?.ToString(), "Module", StringComparison.InvariantCultureIgnoreCase) ? ResourceType.Module : ResourceType.Script;
                        
                         try
