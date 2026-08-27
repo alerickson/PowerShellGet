@@ -143,6 +143,73 @@ function Convert-VersionParamaters
     }
 }
 
+# Adds v2-compatible properties to PSResourceRepository objects
+function Add-V2RepositoryProperties {
+    [CmdletBinding()]
+    param([Parameter(ValueFromPipeline=$true)]$InputObject)
+    process {
+        $sourceLocation = if ($InputObject.Uri) { $InputObject.Uri.ToString() } else { '' }
+        $installPolicy = if ($InputObject.Trusted) { 'Trusted' } else { 'Untrusted' }
+        $publishLocation = ''
+        $scriptSourceLocation = ''
+        $scriptPublishLocation = ''
+        if ($sourceLocation) {
+            $baseUri = $sourceLocation.TrimEnd('/')
+            $publishLocation = "$baseUri/package/"
+            $scriptSourceLocation = "$baseUri/items/psscript"
+            $scriptPublishLocation = "$baseUri/package/"
+        }
+        [PSCustomObject]@{
+            PSTypeName                = 'Microsoft.PowerShell.Commands.PSRepositoryInfo'
+            Name                      = $InputObject.Name
+            SourceLocation            = $sourceLocation
+            Trusted                   = $InputObject.Trusted
+            Registered                = $true
+            InstallationPolicy        = $installPolicy
+            PackageManagementProvider = 'NuGet'
+            PublishLocation           = $publishLocation
+            ScriptSourceLocation      = $scriptSourceLocation
+            ScriptPublishLocation     = $scriptPublishLocation
+            ProviderOptions           = @{}
+        }
+    }
+}
+
+# Adds v2-compatible properties to PSResourceInfo objects
+function Add-V2ResourceProperties {
+    [CmdletBinding()]
+    param([Parameter(ValueFromPipeline=$true)]$InputObject)
+    process {
+        $repoUrl = if ($InputObject.RepositorySourceUrl) { $InputObject.RepositorySourceUrl.ToString() } else { '' }
+        [PSCustomObject]@{
+            PSTypeName                = 'Microsoft.PowerShell.Commands.PSRepositoryItemInfo'
+            Name                      = $InputObject.Name
+            Version                   = $InputObject.Version
+            Type                      = $InputObject.Type
+            Description               = $InputObject.Description
+            Author                    = $InputObject.Author
+            CompanyName               = $InputObject.CompanyName
+            Copyright                 = $InputObject.Copyright
+            PublishedDate             = $InputObject.PublishedDate
+            InstalledDate             = $InputObject.InstalledDate
+            UpdatedDate               = $InputObject.UpdatedDate
+            LicenseUri                = $InputObject.LicenseUri
+            ProjectUri                = $InputObject.ProjectUri
+            IconUri                   = $InputObject.IconUri
+            Tags                      = $InputObject.Tags
+            Includes                  = $InputObject.Includes
+            PowerShellGetFormatVersion = $InputObject.PowerShellGetFormatVersion
+            ReleaseNotes              = $InputObject.ReleaseNotes
+            Dependencies              = $InputObject.Dependencies
+            RepositorySourceLocation  = $repoUrl
+            Repository                = $InputObject.Repository
+            PackageManagementProvider = 'NuGet'
+            AdditionalMetadata        = $InputObject.AdditionalMetadata
+            InstalledLocation         = $InputObject.InstalledLocation
+        }
+    }
+}
+
 ####
 ####
 # Proxy functions
@@ -234,7 +301,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Find-PSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -360,7 +427,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Find-PSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -517,7 +584,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Find-PSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -727,7 +794,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Find-PSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -826,7 +893,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Get-InstalledPSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -922,7 +989,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Get-InstalledPSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -987,7 +1054,7 @@ param(
             }
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Get-PSResourceRepository', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2RepositoryProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -1136,7 +1203,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Install-PSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -1279,7 +1346,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Install-PSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -1799,7 +1866,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Register-PSResourceRepository', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2RepositoryProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -1951,7 +2018,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Save-PSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -2102,7 +2169,7 @@ param(
             if ( $PSBoundParameters['AcceptLicense'] )    { $null = $PSBoundParameters.Remove('AcceptLicense') }
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Save-PSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -2229,7 +2296,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Set-PSResourceRepository', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2RepositoryProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -2417,7 +2484,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Uninstall-PSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -2524,7 +2591,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Uninstall-PSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -2714,7 +2781,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Update-PSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -2832,7 +2899,7 @@ param(
             # END PARAMETER MAP
 
             $wrappedCmd = $ExecutionContext.InvokeCommand.GetCommand('Update-PSResource', [System.Management.Automation.CommandTypes]::Cmdlet)
-            $scriptCmd = {& $wrappedCmd @PSBoundParameters }
+            $scriptCmd = {& $wrappedCmd @PSBoundParameters | Add-V2ResourceProperties }
 
             # Set internal hook for being invoked from Compat module
             try {
@@ -3215,5 +3282,9 @@ $aliasesToExport = @('
     'pumo',
     'upmo'
 )
+
+# Configure default display to match v2 formatting
+Update-TypeData -TypeName 'Microsoft.PowerShell.Commands.PSRepositoryInfo' -DefaultDisplayPropertySet 'Name','InstallationPolicy','SourceLocation' -Force
+Update-TypeData -TypeName 'Microsoft.PowerShell.Commands.PSRepositoryItemInfo' -DefaultDisplayPropertySet 'Name','Version','Type','Repository','Description' -Force
 
 export-ModuleMember -Function $functionsToExport -Alias $aliasesToExport
