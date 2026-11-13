@@ -51,7 +51,8 @@ agency plugin install local:C:\code\PowerShellGet\plugins\mar-onboarding
    gh repo clone agency-microsoft/playground
    cd playground
    git checkout -b <alias>/mar-onboarding
-   Copy-Item -Recurse C:\code\PowerShellGet\plugins\mar-onboarding .\plugins\mar-onboarding -Force
+   Remove-Item .\plugins\mar-onboarding -Recurse -Force -ErrorAction SilentlyContinue
+   Copy-Item C:\code\PowerShellGet\plugins\mar-onboarding .\plugins\mar-onboarding -Recurse
    agency plugin check .\plugins\mar-onboarding
    ```
 

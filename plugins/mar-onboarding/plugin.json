@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "description": "Onboard a PowerShell module to MAR (Microsoft Artifact Registry) as a PSResource: create the ACR, onboard it to MAR, syndicate to the Air-Gapped Clouds, publish (manually or with Ev2), and verify.",
   "author": {
-    "name": "PowerShell Team"
+    "name": "alerickson",
+    "email": "americks@microsoft.com"
   },
   "keywords": [
     "powershell",
