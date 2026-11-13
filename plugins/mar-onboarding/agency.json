@@ -10,7 +10,7 @@
     }
   ],
   "engines": [
-    "*"
+    "copilot"
   ],
   "category": "devops",
   "platforms": [

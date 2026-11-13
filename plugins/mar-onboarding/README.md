@@ -1,14 +1,12 @@
 # MAR Onboarding plugin
 
-This Agency, Copilot CLI, or Claude Code plugin onboards a PowerShell module to **MAR (Microsoft Artifact Registry)** as a **PSResource**. It can also syndicate the module to the Air-Gapped Clouds (USNat and USSec).
+This [Agency](https://aka.ms/agency) plugin onboards a PowerShell module to **MAR (Microsoft Artifact Registry)** as a **PSResource**. It can also syndicate the module to the Air-Gapped Clouds (USNat and USSec). It runs in `agency copilot`.
 
 Example prompts:
 
 > Onboard the PowerShell module in `./out/MyModule` to MAR using ACR `mymoduleacr` in subscription `<sub>`, publish with Ev2, and syndicate it to the AGCs.
 
 > Publish MyModule 1.2.3 to MAR manually and verify it syndicated.
-
-You can also run the slash command: `/onboard-to-mar MyModule mymoduleacr manual syndicate-agc`
 
 ## What's included
 
@@ -21,23 +19,44 @@ You can also run the slash command: `/onboard-to-mar MyModule mymoduleacr manual
 | `skills/mar-publish-ev2` | Sets up the managed identity, roles, and federated identity credentials (`scripts/New-MarPublishIdentity.ps1`), resolves the Ev2 sample's TODOs, covers ServiceGroup registration, and bumps the version (`scripts/Update-Ev2BuildVersion.ps1`) |
 | `skills/mar-verify-publishing` | Checks the ACR repository and tag, MCRFlow status, and webhook activity (`scripts/Test-MarPublish.ps1`) |
 | `agents/mar-onboarding.md` | Specialist subagent |
-| `commands/onboard-to-mar.md` | `/onboard-to-mar` slash command |
+| `plugin.json` | Plugin manifest (required) |
+| `agency.json` | Agency metadata: engines, category, platforms, and authors |
 
 ## Install
 
-This repository is a plugin marketplace (`.claude-plugin/marketplace.json` at the repository root).
+The plugin is published in the [Agency Playground](https://github.com/agency-microsoft/playground) marketplace. Install it once from PowerShell:
 
-```text
-# Agency / Claude Code
-/plugin marketplace add alerickson/PowerShellGet
-/plugin install mar-onboarding@powershellget-plugins
-
-# GitHub Copilot CLI
-copilot plugin marketplace add alerickson/PowerShellGet
-copilot plugin install mar-onboarding@powershellget-plugins
+```powershell
+agency plugin install market:mar-onboarding@playground
 ```
 
-To test a local checkout, point the marketplace at the folder instead, for example `/plugin marketplace add C:\code\PowerShellGet`.
+Then start a new session:
+
+```powershell
+agency copilot
+```
+
+To test a local checkout before it's published to the Playground, run:
+
+```powershell
+agency plugin install local:C:\code\PowerShellGet\plugins\mar-onboarding
+```
+
+## Publish updates to the Playground
+
+1. Join the [Agency Open Contributor](https://coreidentity.microsoft.com/manage/Entitlement/entitlement/agencyopenco-adho) group and request the **Reader** role. This role grants write access to the Playground.
+2. Copy this folder into a Playground branch and validate it:
+
+   ```powershell
+   gh repo clone agency-microsoft/playground
+   cd playground
+   git checkout -b <alias>/mar-onboarding
+   Copy-Item -Recurse C:\code\PowerShellGet\plugins\mar-onboarding .\plugins\mar-onboarding -Force
+   agency plugin check .\plugins\mar-onboarding
+   ```
+
+3. Commit the changes, push, and open a PR. Don't add a `marketplace.json`; the Playground generates it.
+4. To promote the plugin to the curated marketplace later, follow the issue-based [submission process](https://github.com/agency-microsoft/.github-private#how-to-submit-a-plugin-or-catalog).
 
 ## Prompt template for onboarding teams
 
@@ -68,12 +87,6 @@ Short version:
 
 ```text
 Onboard my PowerShell module <MyModule> at <path> to MAR using ACR <acrname>, publish <manually | with Ev2>, and <syndicate | don't syndicate> to the AGCs.
-```
-
-Slash command:
-
-```text
-/onboard-to-mar <MyModule> <acrname> <manual|ev2> syndicate-agc
 ```
 
 ### What to expect
