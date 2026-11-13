@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/agency-microsoft/.github-private/main/agency.schema.json",
+  "name": "mar-onboarding",
+  "displayName": "MAR Onboarding for PowerShell Modules",
+  "description": "Onboard a PowerShell module to MAR (Microsoft Artifact Registry) as a PSResource: create the ACR, onboard it to MAR via the MCR repo, syndicate to the Air-Gapped Clouds (USNat/USSec), publish manually or via Ev2, and verify syndication.",
+  "authors": [
+    {
+      "name": "alerickson",
+      "email": "americks@microsoft.com"
+    }
+  ],
+  "engines": [
+    "*"
+  ],
+  "category": "devops",
+  "platforms": [
+    "windows",
+    "macos",
+    "linux"
+  ]
+}
